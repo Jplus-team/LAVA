@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Lava Admin Panel</title>
+  <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body style="background:#111; color:white; font-family:sans-serif">
+<div id="root"></div>
+<script type="text/babel">
+function App() {
+  const [otp, setOtp] = React.useState('');
+  const [valid, setValid] = React.useState(false);
+  const [plugins, setPlugins] = React.useState([]);
+
+  const verifyOtp = async () => {
+    const res = await fetch('/api/auth/validate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ otp })
+    });
+    const data = await res.json();
+    setValid(data.success);
+    if (data.success) fetchPlugins();
+  };
+
+  const fetchPlugins = async () => {
+    const res = await fetch('/api/plugins/list', {
+      headers: { Authorization: 'Bearer ' + otp }
+    });
+    const data = await res.json();
+    setPlugins(data);
+  };
+
+  const togglePlugin = async name => {
+    await fetch(`/api/plugins/toggle?name=${name}`, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + otp }
+    });
+    fetchPlugins();
+  };
+
+  if (!valid) return (
+    <div style={{marginTop: '5rem', textAlign: 'center'}}>
+      <h1>Enter OTP</h1>
+      <input value={otp} onChange={e => setOtp(e.target.value)} />
+      <button onClick={verifyOtp}>Verify</button>
+    </div>
+  );
+
+  return (
+    <div style={{padding: '2rem'}}>
+      <h1>Lava Admin Panel</h1>
+      <table border="1" style={{width: '100%', marginTop: '1rem'}}>
+        <thead>
+          <tr><th>Name</th><th>Version</th><th>Author</th><th>Enabled</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          {plugins.map(p => (
+            <tr key={p.Name}>
+              <td>{p.Name}</td>
+              <td>{p.Version}</td>
+              <td>{p.Author}</td>
+              <td>{p.Enabled ? '✅' : '❌'}</td>
+              <td><button onClick={() => togglePlugin(p.Name)}>{p.Enabled ? 'Disable' : 'Enable'}</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
+</html>
